@@ -1,0 +1,90 @@
+# Trigger build on all changes to master and release branches
+trigger:
+  batch: true
+  branches:
+    include:
+      - master
+      - develop
+
+resources:
+  repositories:
+    - repository: test-repo
+      type: git
+      name: "some-test"
+      ref: "refs/heads/master"
+
+variables:
+  - name: 'major'
+    value: 1
+  - name: 'minor'
+    value: 0
+  - name: 'patch'
+    value: $[counter(variables['minor'], 0)]
+  - name: System.Debug
+    value: true    
+
+name: $(BuildDefinitionName)_$(major).$(minor).$(patch)
+
+stages:
+
+# Stage: Verification Build ------------------------------------------------------------------------
+
+- stage: 'Verification_Build'
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  displayName: 'Verification Build'
+  jobs:
+
+  # Job: Build Docker API  ------
+
+  - job: 'Build'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: task-01
+      displayName: 'Some build task'
+      inputs:
+        param: 'param'
+
+  # Job: Test MPM API  ------
+
+  - job: 'Test'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: task-02
+      displayName: 'Some test task'
+      inputs:
+        param: 'param'
+
+    - task: task-03
+      displayName: 'Some other test task'
+      inputs:
+        param: 'param'
+
+
+
+# Stage: Build and Push ------------------------------------------------------------------------
+
+- stage: 'Build_and_Push'
+  condition: and(ne(variables['Build.Reason'], 'PullRequest'),ne(variables['Build.SourceBranch'], 'refs/heads/master'))
+  displayName: 'Build'
+  dependsOn: []
+  pool:
+    vmImage: ubuntu-latest
+  jobs:   
+
+  # Job: Build|Push Docker API  ------  
+
+  - job: 'Build'
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: task-02
+      displayName: 'Some test task'
+      inputs:
+        param: 'param'
+
+    - task: task-03
+      displayName: 'Some other test task'
+      inputs:
+        param: 'param'
